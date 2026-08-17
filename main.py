@@ -32,6 +32,7 @@ def enviar_telegram(mensagem):
         print(f"Erro ao enviar: {e}")
 
 print("=== INICIANDO ROBÔ MATRIX C/ RADAR DO BRANCO ===")
+enviar_telegram("⚠️ <b>TESTE MANUAL:</b> O robô está online e testando a conexão com o canal!")
 ultima_rodada_analisada = None
 contador_branco = 0  # Quantas rodadas sem sair Branco
 
