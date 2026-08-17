@@ -4,7 +4,7 @@ import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 
-# --- SERVIDOR WEB PARA MANTER O RENDER ONLINE (PORTA 10000) ---
+# --- SERVIDOR WEB (RENDER) ---
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -18,8 +18,8 @@ def rodar_servidor_web():
 
 threading.Thread(target=rodar_servidor_web, daemon=True).start()
 
-# --- CONFIGURAÇÕES DO TELEGRAM ---
-TOKEN = "8626894323:AAEJMbH9csoWWiqh0hS0va1Aitzmb9r7p2o"
+# --- CONFIGURAÇÕES ---
+TOKEN = "8626894323:AAE3hW8csoWiqbW58va1AiZw9r7p2o"
 CHAT_ID = "@AlgoritmoMatrixDouble2026"
 URL_API_BLAZE = "https://blaze.com/api/roulette_games/recent"
 
@@ -27,64 +27,49 @@ def enviar_telegram(mensagem):
     try:
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
         payload = {"chat_id": CHAT_ID, "text": mensagem, "parse_mode": "HTML"}
-        res = requests.post(url, json=payload, timeout=5)
-        print(f"Status Telegram: {res.status_code} - Resposta: {res.text}")
-        return res.status_code
+        requests.post(url, json=payload, timeout=5)
     except Exception as e:
-        print(f"Erro ao enviar mensagem: {e}")
-        return None
+        print(f"Erro ao enviar: {e}")
 
-print("=== INICIANDO ROBÔ MATRIX ULTIMATE - TESTE DE LOGS ===")
-enviar_telegram("🚀 <b>ROBÔ REINICIADO E CONECTADO!</b>\n\nMonitorando a Blaze ativamente...")
-
+print("=== INICIANDO ROBÔ MATRIX C/ RADAR DO BRANCO ===")
 ultima_rodada_analisada = None
-
-def obter_pedras_recentes():
-    try:
-        res = requests.get(URL_API_BLAZE, timeout=5)
-        if res.status_code == 200:
-            return res.json()
-    except Exception as e:
-        print(f"Erro ao acessar API da Blaze: {e}")
-    return None
+contador_branco = 0  # Quantas rodadas sem sair Branco
 
 while True:
     try:
-        dados = obter_pedras_recentes()
-        if dados and len(dados) > 0:
-            pedras = [x['color'] for x in dados[:10]]
-            id_atual = dados[0]['id']
+        res = requests.get(URL_API_BLAZE, timeout=5)
+        if res.status_code == 200:
+            dados = res.json()
+            if dados and len(dados) > 0:
+                id_atual = dados[0]['id']
+                cor_atual = dados[0]['color'] # 0=Branco, 1=Vermelho, 2=Preto
 
-            # Só analisa se mudou de rodada na Blaze
-            if id_atual != ultima_rodada_analisada:
-                ultima_rodada_analisada = id_atual
-                print(f"Nova rodada detectada! ID: {id_atual} | Últimas cores: {pedras[:5]}")
+                if id_atual != ultima_rodada_analisada:
+                    ultima_rodada_analisada = id_atual
+                    
+                    # Lógica do Radar do Branco
+                    if cor_atual == 0:
+                        enviar_telegram("🎉 <b>BRANCO SAIU! (14x)</b>")
+                        contador_branco = 0
+                    else:
+                        contador_branco += 1
+                        if contador_branco == 10:
+                            enviar_telegram("🚨 <b>RADAR DO BRANCO:</b> O Branco está atrasado há 10 rodadas. Fique atento!")
+                    
+                    # Lógica de Sinais (Surf/Xadrez)
+                    pedras = [x['color'] for x in dados[:10]]
+                    
+                    # 1. SURF
+                    if pedras[0] == pedras[1] == pedras[2] and pedras[0] in [1, 2]:
+                        nome = "🔴 VERMELHO" if pedras[0] == 1 else "⚫ PRETO"
+                        enviar_telegram(f"🎯 <b>SINAL (SURF):</b> {nome}\n⚪ <b>Proteção:</b> Branco")
 
-                # 1. SURF (3 cores iguais seguidas)
-                if pedras[0] == pedras[1] == pedras[2] and pedras[0] in [1, 2]:
-                    cor_alvo = pedras[0]
-                    nome_cor = "🔴 VERMELHO" if cor_alvo == 1 else "⚫ PRETO"
-                    msg = (
-                        f"🎯 <b>SINAL ENCONTRADO! (SURF)</b>\n\n"
-                        f"➡️ <b>Entrada:</b> {nome_cor}\n"
-                        f"⚪ <b>Proteção:</b> Branco (14x)\n"
-                        f"🔄 <b>Gale:</b> Até 1 proteção"
-                    )
-                    enviar_telegram(msg)
-
-                # 2. XADREZ (Alternado 1x1)
-                elif pedras[0] != pedras[1] and pedras[1] != pedras[2] and all(p in [1, 2] for p in pedras[:3]):
-                    cor_alvo = 1 if pedras[0] == 2 else 2
-                    nome_cor = "🔴 VERMELHO" if cor_alvo == 1 else "⚫ PRETO"
-                    msg = (
-                        f"🎯 <b>SINAL ENCONTRADO! (XADREZ)</b>\n\n"
-                        f"➡️ <b>Entrada:</b> {nome_cor}\n"
-                        f"⚪ <b>Proteção:</b> Branco (14x)\n"
-                        f"🔄 <b>Gale:</b> Até 1 proteção"
-                    )
-                    enviar_telegram(msg)
+                    # 2. XADREZ
+                    elif pedras[0] != pedras[1] and pedras[1] != pedras[2] and all(p in [1, 2] for p in pedras[:3]):
+                        nome = "🔴 VERMELHO" if pedras[0] == 1 else "⚫ PRETO"
+                        enviar_telegram(f"🎯 <b>SINAL (XADREZ):</b> {nome}\n⚪ <b>Proteção:</b> Branco")
 
     except Exception as e:
-        print(f"Erro no loop principal: {e}")
+        print(f"Erro: {e}")
 
     time.sleep(5)
