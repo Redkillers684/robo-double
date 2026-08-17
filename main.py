@@ -90,7 +90,7 @@ def analisar_e_disparar(resultados):
         enviar_mensagem(mensagem)
 
 print("🤖 Robô Matrix ativado e monitorando em tempo real...")
-
+enviar_mensagem("🤖 *ALGORITMO MATRIX ON:* Robô ativado e monitorando a Blaze 24/7!")
 while True:
     id_atual, ultimos_resultados = obter_ultimos_resultados()
     
