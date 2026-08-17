@@ -4,73 +4,93 @@ import requests
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 
-# --- SERVIDOR WEB PARA MANTER ONLINE ---
+# Servidor web obrigatório para o Render não derrubar o bot
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot Matrix 24/7 Ativo!")
+        self.wfile.write(b"Bot Matrix Operacional!")
 
-threading.Thread(target=lambda: HTTPServer(('0.0.0.0', int(os.environ.get("PORT", 10000))), SimpleHTTPRequestHandler).serve_forever(), daemon=True).start()
+def iniciar_servidor():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
+    server.serve_forever()
 
-# --- CONFIGURAÇÕES ---
+threading.Thread(target=iniciar_servidor, daemon=True).start()
+
+# Configurações do Telegram e API
 TOKEN = "8626894323:AAE3hW8csoWiqbW58va1AiZw9r7p2o"
 CHAT_ID = "@AlgoritmoMatrixDouble2026"
-URL_API_BLAZE = "https://blaze.com/api/roulette_games/recent"
+URL_BLAZE = "https://blaze.com/api/roulette_games/recent"
 
-def enviar_telegram(mensagem):
+def enviar_telegram(texto):
     try:
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-        requests.post(url, json={"chat_id": CHAT_ID, "text": mensagem, "parse_mode": "HTML"}, timeout=5)
-    except:
+        requests.post(url, json={"chat_id": CHAT_ID, "text": texto, "parse_mode": "HTML"}, timeout=5)
+    except Exception:
         pass
 
-# --- LÓGICA DE SINAIS ---
-ultima_rodada_analisada = None
+print("=== BOT INICIADO E MONITORANDO ===")
+
+ultima_rodada_id = None
 contador_branco = 0
 
 while True:
     try:
-        # Cabeçalho adicionado para evitar bloqueio da Blaze no servidor Render
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'}
-        res = requests.get(URL_API_BLAZE, headers=headers, timeout=5)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json"
+        }
         
-        if res.status_code == 200:
-            dados = res.json()
-            if dados:
-                id_atual = dados[0]['id']
+        response = requests.get(URL_BLAZE, headers=headers, timeout=5)
+        
+        if response.status_code == 200:
+            dados = response.json()
+            if dados and isinstance(dados, list) and len(dados) > 0:
+                rodada_recente = dados[0]
+                id_atual = rodada_recente.get('id')
                 
-                # Só analisa se a roleta girou e gerou um novo ID
-                if id_atual != ultima_rodada_analisada:
-                    pedras = [x['color'] for x in dados[:10]] # 0=Branco, 1=Vermelho, 2=Preto
-                    cor_atual = pedras[0]
+                # Executa apenas quando a roleta muda de ID (nova rodada fechada)
+                if id_atual != ultima_rodada_id:
                     
-                    # Evita disparar sinal falso no exato momento que o bot liga
-                    if ultima_rodada_analisada is not None:
+                    # Se não for a primeira leitura após ligar, processa os sinais
+                    if ultima_rodada_id is not None:
+                        pedras = [item.get('color') for item in dados[:10]] # 0=Branco, 1=Vermelho, 2=Preto
+                        cor_atual = pedras[0]
                         
-                        # 1. RADAR DO BRANCO
+                        # 1. Radar do Branco
                         if cor_atual == 0:
-                            enviar_telegram("🎉 <b>BRANCO SAIU NA BLAZE!</b>")
+                            enviar_telegram("🎉 <b>SAIU BRANCO NA BLAZE! (14x)</b>")
                             contador_branco = 0
                         else:
+                        
                             contador_branco += 1
                             if contador_branco >= 10:
-                                enviar_telegram(f"🚨 <b>RADAR DO BRANCO:</b> Já passaram {contador_branco} rodadas sem sair Branco!")
+                                enviar_telegram(f"🚨 <b>RADAR DO BRANCO:</b> Já passaram {contador_branco} rodadas seguidas sem sair Branco!")
 
-                        # 2. SURF (3 cores iguais seguidas)
+                        # 2. Padrão Surf (3 cores iguais seguidas: Vermelho ou Preto)
                         if pedras[0] == pedras[1] == pedras[2] and pedras[0] in [1, 2]:
-                            cor_alvo = "🔴 VERMELHO" if pedras[0] == 1 else "⚫ PRETO"
-                            enviar_telegram(f"🎯 <b>SINAL SURF!</b>\n\n➡️ <b>Entrada:</b> {cor_alvo}\n⚪ <b>Proteção:</b> Branco")
+                            cor_nome = "🔴 VERMELHO" if pedras[0] == 1 else "⚫ PRETO"
+                            enviar_telegram(
+                                f"🎯 <b>SINAL ENCONTRADO: SURF!</b>\n\n"
+                                f"➡️ <b>Entrada:</b> {cor_nome}\n"
+                                f"⚪ <b>Proteção:</b> Branco (14x)\n"
+                                f"🔄 <b>Gale:</b> Até 1 proteção"
+                            )
 
-                        # 3. XADREZ (Cores alternadas: ex. V-P-V ou P-V-P)
+                        # 3. Padrão Xadrez (Alternado 1x1)
                         elif pedras[0] != pedras[1] and pedras[1] != pedras[2] and all(p in [1, 2] for p in pedras[:3]):
-                            cor_alvo = "🔴 VERMELHO" if pedras[0] == 2 else "⚫ PRETO"
-                            enviar_telegram(f"🎯 <b>SINAL XADREZ!</b>\n\n➡️ <b>Entrada:</b> {cor_alvo}\n⚪ <b>Proteção:</b> Branco")
+                            cor_nome = "🔴 VERMELHO" if pedras[0] == 2 else "⚫ PRETO"
+                            enviar_telegram(
+                                f"🎯 <b>SINAL ENCONTRADO: XADREZ!</b>\n\n"
+                                f"➡️ <b>Entrada:</b> {cor_nome}\n"
+                                f"⚪ <b>Proteção:</b> Branco (14x)\n"
+                                f"🔄 <b>Gale:</b> Até 1 proteção"
+                            )
 
-                    # Atualiza o ID para esperar a próxima rodada
-                    ultima_rodada_analisada = id_atual
+                    ultima_rodada_id = id_atual
                     
     except Exception:
         pass
-        
+
     time.sleep(5)
