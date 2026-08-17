@@ -34,7 +34,7 @@ def enviar_telegram(texto):
 enviar_telegram("🚀 <b>BOT MATRIX PROFISSIONAL ATIVADO!</b>\n\nMonitorando sinais, greens e losses em tempo real...")
 
 ultima_rodada_id = None
-sinal_ativo = None  # Guarda o sinal pendente para conferir o resultado na rodada seguinte
+sinal_ativo = None
 
 while True:
     try:
@@ -51,53 +51,34 @@ while True:
                 rodada_recente = dados[0]
                 id_atual = rodada_recente.get('id')
                 
-                # Executa apenas quando a roleta gera uma nova rodada
                 if id_atual != ultima_rodada_id:
-                    pedras = [item.get('color') for item in dados[:10]] # 0=Branco, 1=Vermelho, 2=Preto
+                    pedras = [item.get('color') for item in dados[:10]]
                     cor_saiu = pedras[0]
                     
-                    # PASSO 1: SE HOUVER UM SINAL ATIVO DA RODADA ANTERIOR, VERIFICA O RESULTADO (GREEN/LOSS)
                     if sinal_ativo is not None:
-                        cor_alvo = sinal_ativo['cor_alvo'] # 1 ou 2
+                        cor_alvo = sinal_ativo['cor_alvo']
                         nome_estrategia = sinal_ativo['estrategia']
                         
                         if cor_saiu == 0:
-                            enviar_telegram(f"✅ <b>GREEN NO BRANCO! ({nome_estrategia})</b> ⚪\nProteção paga com sucesso!")
+                            enviar_telegram(f"✅ <b>GREEN NO BRANCO! ({nome_estrategia})</b> ⚪")
                         elif cor_saiu == cor_alvo:
-                            enviar_telegram(f"✅ <b>GREEN! ({nome_estrategia})</b> 🎯\nResultado bateu com a análise!")
+                            enviar_telegram(f"✅ <b>GREEN! ({nome_estrategia})</b> 🎯")
                         else:
-                            enviar_telegram(f"❌ <b>LOSS ({nome_estrategia})</b>\nA cor não coincidiu.")
+                            enviar_telegram(f"❌ <b>LOSS ({nome_estrategia})</b>")
                         
-                        sinal_ativo = None # Reseta o sinal após conferir
+                        sinal_ativo = None
 
-                    # PASSO 2: ANALISA NOVOS PADRÕES SE AINDA HOUVER DADOS SUFICIENTES
                     if ultima_rodada_id is not None and len(pedras) >= 3:
-                        
-                        # Padrão Surf (3 cores iguais seguidas)
                         if pedras[0] == pedras[1] == pedras[2] and pedras[0] in [1, 2]:
                             cor_alvo = pedras[0]
                             nome_cor = "🔴 VERMELHO" if cor_alvo == 1 else "⚫ PRETO"
-                            
-                            enviar_telegram(
-                                f"🎯 <b>SINAL ENCONTRADO: SURF</b>\n\n"
-                                f"➡️ <b>Entrada:</b> {nome_cor}\n"
-                                f"⚪ <b>Proteção:</b> Branco (14x)\n"
-                                f"🔄 <b>Gale:</b> Até 1 proteção"
-                            )
+                            enviar_telegram(f"🎯 <b>SINAL ENCONTRADO: SURF</b>\n\n➡️ <b>Entrada:</b> {nome_cor}\n⚪ <b>Proteção:</b> Branco (14x)")
                             sinal_ativo = {'cor_alvo': cor_alvo, 'estrategia': 'SURF'}
 
-                        # Padrão Xadrez (Alternado 1x1)
                         elif pedras[0] != pedras[1] and pedras[1] != pedras[2] and all(p in [1, 2] for p in pedras[:3]):
-                            # Se alternou, a tendência de entrada costuma ser a cor oposta ou manter o ciclo
                             cor_alvo = 1 if pedras[0] == 2 else 2
                             nome_cor = "🔴 VERMELHO" if cor_alvo == 1 else "⚫ PRETO"
-                            
-                            enviar_telegram(
-                                f"🎯 <b>SINAL ENCONTRADO: XADREZ</b>\n\n"
-                                f"➡️ <b>Entrada:</b> {nome_cor}\n"
-                                f"⚪ <b>Proteção:</b> Branco (14x)\n"
-                                f"🔄 <b>Gale:</b> Até 1 proteção"
-                            )
+                            enviar_telegram(f"🎯 <b>SINAL ENCONTRADO: XADREZ</b>\n\n➡️ <b>Entrada:</b> {nome_cor}\n⚪ <b>Proteção:</b> Branco (14x)")
                             sinal_ativo = {'cor_alvo': cor_alvo, 'estrategia': 'XADREZ'}
 
                     ultima_rodada_id = id_atual
