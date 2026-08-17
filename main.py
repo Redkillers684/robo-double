@@ -19,7 +19,7 @@ def rodar_servidor_web():
 threading.Thread(target=rodar_servidor_web, daemon=True).start()
 
 # --- CONFIGURAÇÕES DO TELEGRAM ---
-TOKEN = "8626894323:AAE1bN6o3tV5-7389"  # Insira o Token completo se necessário
+TOKEN = "8626894323:AAE1bN6o3tV5-7389"
 CHAT_ID = "@AlgoritmoMatrixDouble2026"
 URL_API_BLAZE = "https://blaze.com/api/roulette_games/recent"
 
@@ -33,11 +33,10 @@ def enviar_telegram(mensagem):
         print(f"Erro ao enviar mensagem: {e}")
         return None
 
-print("=== INICIANDO ROBÔ MATRIX ULTIMATE - COM GREEN/LOSS E RADAR BRANCO ===")
-enviar_telegram("🚀 <b>ALGORITMO MATRIX ULTIMATE ON!</b>\n\nRobô ativo com monitoramento de GREEN/LOSS e Radar do Branco 24/7!")
+print("=== INICIANDO ROBÔ MATRIX ULTIMATE - VERSÃO ESTÁVEL ===")
+enviar_telegram("🚀 <b>ALGORITMO MATRIX ULTIMATE ON!</b>\n\nRobô atualizado e monitorando a Blaze em tempo real!")
 
 ultima_rodada_analisada = None
-limite_sem_branco = 12  # Dispara o radar após 12 rodadas sem sair branco
 
 def obter_pedras_recentes():
     try:
@@ -48,114 +47,63 @@ def obter_pedras_recentes():
         print(f"Erro ao acessar API da Blaze: {e}")
     return None
 
-def checar_resultado_sinal(cor_alvo_code):
-    """
-    Monitora até 2 rodadas (Primeira entrada e Gale 1) para confirmar GREEN ou LOSS.
-    cor_alvo_code: 1 para Vermelho, 2 para Preto
-    """
-    print("Aguardando resultado da 1ª Entrada...")
-    time.sleep(30)  # Tempo para girar a rodada
-    
-    dados = obter_pedras_recentes()
-    if not dados:
-        return
-    
-    primeira_pedra = dados[0]['color']
-    
-    # 0 = Branco, 1 = Vermelho, 2 = Preto
-    if primeira_pedra == 0:
-        enviar_telegram("⚪ <b>GREEN NO BRANCO! (14x)</b> 🎉")
-        return
-    elif primeira_pedra == cor_alvo_code:
-        enviar_telegram("✅ <b>GREEN DIRETO!</b> 🚀")
-        return
-    else:
-        # Errou a 1ª entrada, faz o Gale 1
-        enviar_telegram("🔄 <b>ATENÇÃO: APLICAR GALE 1!</b>")
-        time.sleep(30)  # Aguarda a rodada do Gale 1
-        
-        dados_gale = obter_pedras_recentes()
-        if not dados_gale:
-            return
-            
-        segunda_pedra = dados_gale[0]['color']
-        
-        if segunda_pedra == 0:
-            enviar_telegram("⚪ <b>GREEN NO BRANCO NO GALE 1! (14x)</b> 🎉")
-        elif segunda_pedra == cor_alvo_code:
-            enviar_telegram("✅ <b>GREEN NO GALE 1!</b> 👍")
-        else:
-            enviar_telegram("❌ <b>LOSS NA RODADA</b> 🔻")
-
 while True:
     try:
         dados = obter_pedras_recentes()
         if dados:
-            pedras = [x['color'] for x in dados[:15]]
+            pedras = [x['color'] for x in dados[:10]]
             id_atual = dados[0]['id']
 
             if id_atual != ultima_rodada_analisada:
                 ultima_rodada_analisada = id_atual
-                print(f"Últimas pedras (0=Branco, 1=Vermelho, 2=Preto): {pedras[:6]}")
+                print(f"Últimas pedras (0=Branco, 1=Vermelho, 2=Preto): {pedras[:5]}")
 
-                # --- RADAR DO BRANCO ---
+                # Contador para o Radar do Branco
                 rodadas_sem_branco = 0
                 for p in pedras:
                     if p == 0:
                         break
                     rodadas_sem_branco += 1
 
-                if rodadas_sem_branco >= limite_sem_branco:
+                if rodadas_sem_branco >= 12:
                     msg_branco = (
                         f"🚨 <b>RADAR DO BRANCO ATIVADO!</b>\n\n"
-                        f"⚪ <b>Alerta:</b> {rodadas_sem_branco} rodadas sem sair Branco!\n"
-                        f"🎯 <b>Sugestão:</b> Proteger no Branco (⚪) nas próximas 3 rodadas."
+                        f"⚪ <b>Alerta:</b> Já são {rodadas_sem_branco} rodadas seguidas sem sair Branco!\n"
+                        f"🎯 <b>Sugestão:</b> Proteger no Branco nas próximas rodadas."
                     )
-                    print("Radar do Branco ativado!")
                     enviar_telegram(msg_branco)
-                    time.sleep(40)
-                    continue
+                    print("Alerta do Radar do Branco enviado!")
 
-                # --- ANÁLISE DE PADRÕES REGULARES ---
-                if len(pedras) >= 4:
-                    padrao = None
-                    cor_entrada_str = None
-                    cor_alvo_code = None
+                # Lógica de Padrões Simplificada e Eficiente
+                # 1. SURF (3 da mesma cor: 1=Vermelho, 2=Preto)
+                if pedras[0] == pedras[1] == pedras[2] and pedras[0] in [1, 2]:
+                    cor_alvo = pedras[0]
+                    nome_cor = "🔴 VERMELHO" if cor_alvo == 1 else "⚫ PRETO"
+                    msg_sinal = (
+                        f"🎯 <b>SINAL CONFIRMADO! (SURF)</b>\n\n"
+                        f"📊 <b>Padrão:</b> 3 Cores Iguais\n"
+                        f"➡️ <b>Entrada:</b> {nome_cor}\n"
+                        f"⚪ <b>Proteção:</b> Branco (14x)\n"
+                        f"🔄 <b>Gale:</b> Até 1 proteção"
+                    )
+                    enviar_telegram(msg_sinal)
+                    print("Sinal de Surf enviado com sucesso!")
 
-                    # 1. SURF (4 da mesma cor)
-                    if pedras[0] == pedras[1] == pedras[2] == pedras[3] and pedras[0] in [1, 2]:
-                        padrao = "SURF (Sequência Longa)"
-                        cor_alvo_code = pedras[0]
-                        cor_entrada_str = "🔴 VERMELHO" if cor_alvo_code == 1 else "⚫ PRETO"
-
-                    # 2. XADREZ (Alternado 1x1)
-                    elif pedras[0] != pedras[1] and pedras[1] != pedras[2] and pedras[2] != pedras[3] and all(p in [1, 2] for p in pedras[:4]):
-                        padrao = "XADREZ (Alternado 1x1)"
-                        cor_alvo_code = 1 if pedras[0] == 2 else 2
-                        cor_entrada_str = "🔴 VERMELHO" if cor_alvo_code == 1 else "⚫ PRETO"
-
-                    # 3. 2-PEDRAS (Dupla)
-                    elif pedras[0] == pedras[1] and pedras[0] in [1, 2]:
-                        padrao = "2-PEDRAS (Quebra de Dupla)"
-                        cor_alvo_code = 2 if pedras[0] == 1 else 1
-                        cor_entrada_str = "🔴 VERMELHO" if cor_alvo_code == 1 else "⚫ PRETO"
-
-                    # Se encontrar padrão, envia sinal e monitora o resultado
-                    if padrao and cor_entrada_str:
-                        msg_sinal = (
-                            f"🎯 <b>SINAL CONFIRMADO!</b>\n\n"
-                            f"📊 <b>Padrão:</b> {padrao}\n"
-                            f"➡️ <b>Entrada:</b> {cor_entrada_str}\n"
-                            f"⚪ <b>Proteção:</b> Branco (14x)\n"
-                            f"🔄 <b>Gale:</b> Até 1 proteção"
-                        )
-                        print(f"Padrão {padrao} detectado! Envia sinal...")
-                        enviar_telegram(msg_sinal)
-                        
-                        # Chama a verificação automática de resultado
-                        checar_resultado_sinal(cor_alvo_code)
+                # 2. XADREZ (Alternado: Vermelho, Preto, Vermelho ou inverso)
+                elif pedras[0] != pedras[1] and pedras[1] != pedras[2] and all(p in [1, 2] for p in pedras[:3]):
+                    cor_alvo = 1 if pedras[0] == 2 else 2
+                    nome_cor = "🔴 VERMELHO" if cor_alvo == 1 else "⚫ PRETO"
+                    msg_sinal = (
+                        f"🎯 <b>SINAL CONFIRMADO! (XADREZ)</b>\n\n"
+                        f"📊 <b>Padrão:</b> Alternância 1x1\n"
+                        f"➡️ <b>Entrada:</b> {nome_cor}\n"
+                        f"⚪ <b>Proteção:</b> Branco (14x)\n"
+                        f"🔄 <b>Gale:</b> Até 1 proteção"
+                    )
+                    enviar_telegram(msg_sinal)
+                    print("Sinal de Xadrez enviado com sucesso!")
 
     except Exception as e:
         print(f"Erro no loop principal: {e}")
 
-    time.sleep(5)
+    time.sleep(10)
