@@ -36,7 +36,16 @@ def enviar_telegram(mensagem):
 
 print("=== INICIANDO ROBÔ MATRIX ULTIMATE ===")
 enviar_telegram("🚀 <b>ROBÔ MATRIX CONECTADO E PRONTO!</b>\n\nMonitorando a Blaze em tempo real...")
+print("=== INICIANDO ROBÔ MATRIX ULTIMATE ===")
+enviar_telegram("🚀 <b>ROBÔ MATRIX CONECTADO E PRONTO!</b>\n\nMonitorando a Blaze em tempo real...")
 
+# GATILHO IMEDIATO PARA TESTAR O ENVIO AGORA
+enviar_telegram(
+    f"🎯 <b>SINAL DE ENTRADA (CONFIRMAÇÃO)</b>\n\n"
+    f"➡️ <b>Entrada:</b> 🔴 VERMELHO\n"
+    f"⚪ <b>Proteção:</b> Branco (14x)\n"
+    f"🔄 <b>Gale:</b> Até 1 proteção"
+)
 # TESTE IMEDIATO DE ENTRADA PARA O CANAL
 enviar_telegram(
     f"🎯 <b>SINAL DE ENTRADA (CONFIRMAÇÃO DO SISTEMA)</b>\n\n"
